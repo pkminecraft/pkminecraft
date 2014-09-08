@@ -1,7 +1,9 @@
 /*global require, process, console */
 
 var Express = require('express'),
-    Client = require('node-rest-client').Client,
+    http = require('client-http'),
+    uc = require('underscore'),
+    q = require('q'),
     SECURITY_TOKEN = process.env.DO_TOKEN,
     SERVER_ID = process.env.DO_SERVER_ID,
     SERVICE_BASE_URL = "https://api.digitalocean.com/v2";
@@ -17,20 +19,43 @@ function Droplet(id) {
 
     var dropletId = id,
         baseUrl = SERVICE_BASE_URL + "/droplets/" + id,
-        client = new Client(),
         request = {
-            headers: {
-                "Authorization": "Bearer " + SECURITY_TOKEN
-            }
+            "Authorization": "Bearer " + SECURITY_TOKEN,
+            "Content-Type": "application/json"
         };
 
-    this.status = function (callback) {
-        client.get(baseUrl, request, function (data, response) {
-            var droplet = JSON.parse(data).droplet;
-            callback(droplet.status);
-        }).on('error', function (err) {
-            throw "Unable to load droplet info";
-        });
+    function executeAction(action) {
+        var deferred = q.defer(),
+            data = "{\"type\": \"" + action + "\"}";
+
+        http.request(baseUrl + "/actions", function (data, err) {
+            if (!err) {
+                deferred.resolve();
+            } else {
+                deferred.reject(err);
+            }
+        }, data, request);
+
+        return deferred.promise;
+    }
+
+    this.status = function () {
+        var deferred = q.defer();
+
+        http.request(baseUrl, function (data, err) {
+            if (!err) {
+                var droplet = JSON.parse(data).droplet;
+                deferred.resolve(droplet.status);
+            } else {
+                deferred.reject(err);
+            }
+        }, null, request);
+
+        return deferred.promise;
+    };
+
+    this.stop = function () {
+        return executeAction("shutdown");
     };
 }
 
@@ -42,23 +67,36 @@ function Droplet(id) {
 function main() {
     "use strict";
     var app = new Express(),
-        droplet = new Droplet(SERVER_ID);
+        droplet = new Droplet(SERVER_ID),
+        pServerState = "unknown";
 
     function throwError(response, message) {
-        console.log(message);
+        console.log("Error message: " + message);
         response.set('Content-Type', 'application/json').status(500).send({
             "message": message
         });
     }
 
-    app.get('/', function (request, response) {
-        try {
-            droplet.status(function (status) {
-                response.set('Content-Type', 'text/plain').send(status);
-            });
-        } catch (err) {
-            throwError(err);
-        }
+    app.get('/physical/stop', function (request, response) {
+        droplet.status().then(function (status) {
+            if (status === "active") {
+                droplet.stop().then(function () {
+                    response.set('Content-Type', 'text/plain').send("OK");
+                }, function (err) {
+                    throwError(response, err);
+                });
+            }
+        }, function (err) {
+            throwError(response, err);
+        });
+    });
+
+    app.get('/status', function (request, response) {
+        droplet.status().then(function (status) {
+            response.set('Content-Type', 'text/plain').send(status);
+        }, function (err) {
+            throwError(response, err);
+        });
     });
 
     app.listen(process.env.PORT || 8080);

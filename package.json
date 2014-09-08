@@ -3,9 +3,13 @@
   "version": "0.0.1",
   "main": "src/service/main.js",
   "dependencies": {
+    "client-http": "0.0.7",
+    "commonjs": "0.0.1",
     "express": "~4.0.0",
+    "mc-ping": "~0.0.2",
     "node-rest-client": "^1.0.0",
-	"mc-ping":"~0.0.2"
+    "q": "^1.0.1",
+    "underscore": "^1.7.0"
   },
   "devDependencies": {
     "grunt": "~0.4.4",
