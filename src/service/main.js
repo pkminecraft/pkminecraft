@@ -26,7 +26,8 @@ function Droplet(id) {
 
     this.status = function (callback) {
         client.get(baseUrl, request, function (data, response) {
-            callback(data.status);
+            var droplet = JSON.parse(data).droplet;
+            callback(droplet.status);
         }).on('error', function (err) {
             throw "Unable to load droplet info";
         });
