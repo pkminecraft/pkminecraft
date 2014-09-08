@@ -1,0 +1,1 @@
+/*global console, Client, BASE_URL, SECURITY_TOKEN */
