@@ -1,7 +1,8 @@
 /*global require, process, console */
+/*jslint plusplus: true */
 
 var Express = require('express'),
-    http = require('client-http'),
+    http = require('restler'),
     uc = require('underscore'),
     q = require('q'),
     SECURITY_TOKEN = process.env.DO_TOKEN,
@@ -11,55 +12,7 @@ var Express = require('express'),
 
 /**
  *
- * Droplet Scanner
- * DO's API states that [the droplet ID] is automatically generated upon Droplet creation.
- * This object provides an easy way to retrieve the dropletID, given the droplet name,
- * provided that the droplet exists.
- *
- */
-
-function DropletScanner(){
-        
-        var url = SERVICE_BASE_URL + "/droplets",
-        listRequest = {
-            "Authorization": "Bearer " + SECURITY_TOKEN,
-            "Content-Type": "application/json"
-        };
-        /**
-         * Promise-based function that returns an object with the following format:
-         * { 
-         *    "dropletFound":true|false, //True if we found the dropletID
-         *    "dropletId":1234567        //The droplet ID that was found. Only populated if dropletFound was true.
-         * }    
-         *
-         */
-        this.findDropletId = function (nameOfDropletToFind){
-            var deferred = q.defer(),
-            result ={
-                        "dropletFound":false
-                    };
-            http.request(url, function (data, err) {
-                if (!err) {
-                    var droplets = JSON.parse(data).droplets;
-                    for (var i = 0; i < droplets.length; i++) {
-                        if(droplets[i].name === nameOfDropletToFind){
-                            result.dropletFound = true;
-                            result.dropletId = droplets[i].id;
-                        }
-                    }
-                    deferred.resolve(result);
-                
-                } else {
-                   deferred.reject(err);
-                }
-            }, null, listRequest);
-            return deferred.promise;
-        }
-}
-
-/**
- *
- *  Droplet Manager
+ *  Droplet Object
  *
  */
 
@@ -71,40 +24,170 @@ function Droplet(id) {
         request = {
             "Authorization": "Bearer " + SECURITY_TOKEN,
             "Content-Type": "application/json"
-        };
+        },
+        obj = this;
 
-    function executeAction(action) {
+    this.dropletObject = null;
+
+    function executeAction(action, extraData) {
         var deferred = q.defer(),
-            data = "{\"type\": \"" + action + "\"}";
+            options = {
+                data: null,
+                headers: request
+            },
+            data = {
+                "type": action
+            },
+            extendedData = {};
 
-        http.request(baseUrl + "/actions", function (data, err) {
-            if (!err) {
-                deferred.resolve();
+        if (extraData !== undefined) {
+            uc.extend(data, data, extraData);
+        }
+        options.data = JSON.stringify(data);
+
+
+        console.log("Data: " + options.data);
+
+        http.post(baseUrl + "/actions", options).on('complete', function (data, response) {
+            if (data instanceof Error) {
+                deferred.reject(data);
+            } else if (response.statusCode >= 400) {
+                deferred.reject(data.message);
             } else {
-                deferred.reject(err);
+                deferred.resolve(data.action.id);
             }
-        }, data, request);
+        });
 
         return deferred.promise;
     }
 
+    this.load = function () {
+        var deferred = q.defer(),
+            options = {
+                headers: request
+            };
+
+        http.get(baseUrl, options).on('complete', function (data, response) {
+            if (data instanceof Error) {
+                deferred.reject(data);
+            } else if (response.statusCode >= 400) {
+                deferred.reject(data.message);
+            } else {
+                obj.dropletObject = data.droplet;
+                deferred.resolve();
+            }
+        });
+
+        return deferred.promise;
+    };
+
     this.status = function () {
         var deferred = q.defer();
 
-        http.request(baseUrl, function (data, err) {
-            if (!err) {
-                var droplet = JSON.parse(data).droplet;
-                deferred.resolve(droplet.status);
+        this.load().then(function (droplet) {
+            deferred.resolve(obj.dropletObject.status);
+        }, function () {
+            deferred.reject("Cannot get status");
+        });
+
+        return deferred.promise;
+    };
+
+    this.actionStatus = function (actionId) {
+        var deferred = q.defer(),
+            options = {
+                headers: request
+            };
+
+        http.get(baseUrl + "/actions/" + actionId, options).on('complete', function (data, response) {
+            if (data instanceof Error) {
+                deferred.reject(data);
+            } else if (response.statusCode >= 400) {
+                deferred.reject(data.message);
             } else {
-                deferred.reject(err);
+                deferred.resolve(data.action.status);
             }
-        }, null, request);
+        });
 
         return deferred.promise;
     };
 
     this.stop = function () {
         return executeAction("shutdown");
+    };
+
+    this.start = function () {
+        return executeAction("power_on");
+    };
+
+    this.reboot = function () {
+        return executeAction("reboot");
+    };
+
+    this.takeSnapshot = function () {
+        return executeAction("snapshot", {
+            name: "minecraft-save"
+        });
+    };
+}
+
+/**
+ *
+ * Droplet Factory
+ * DO's API states that [the droplet ID] is automatically generated upon Droplet creation.
+ * This object provides an easy way to retrieve the droplet given the droplet name -
+ * provided that the droplet exists.
+ *
+ */
+
+function DropletFactory() {
+    "use strict";
+
+    var url = SERVICE_BASE_URL + "/droplets",
+        request = {
+            "Authorization": "Bearer " + SECURITY_TOKEN,
+            "Content-Type": "application/json"
+        };
+
+    function buildDroplet(id, deferred) {
+        var droplet = new Droplet(id);
+        droplet.load().then(function (loadedDroplet) {
+            deferred.resolve(droplet);
+        }, function () {
+            deferred.reject("Unable to load droplet");
+        });
+    }
+
+    /**
+     * Promise-based function that returns a droplet if found:
+     */
+    this.findDroplet = function (nameOfDropletToFind) {
+        var i = 0,
+            deferred = q.defer(),
+            options = {
+                headers: request
+            };
+
+        http.get(url, options).on('complete', function (data, response) {
+            if (data instanceof Error) {
+                deferred.reject(data);
+            } else if (response.statusCode >= 400) {
+                deferred.reject(data.message);
+            } else {
+                var droplets = data.droplets;
+                for (i = 0; i < droplets.length; i++) {
+                    if (droplets[i].name === nameOfDropletToFind) {
+                        buildDroplet(droplets[i].id, deferred);
+                        break;
+                    }
+                }
+                if (i >= droplets.length) {
+                    deferred.reject("Droplet not found");
+                }
+            }
+        });
+
+        return deferred.promise;
     };
 }
 
@@ -117,8 +200,9 @@ function main() {
     "use strict";
     var app = new Express(),
         droplet = new Droplet(SERVER_ID),
-        pServerState = "unknown",
-        dropletScanner = new DropletScanner();
+        shutdownStatus = "not-invoked",
+        dropletFactory = new DropletFactory(),
+        timer;
 
     function throwError(response, message) {
         console.log("Error message: " + message);
@@ -127,36 +211,124 @@ function main() {
         });
     }
 
-    app.get('/physical/stop', function (request, response) {
-        droplet.status().then(function (status) {
-            if (status === "active") {
-                droplet.stop().then(function () {
-                    response.set('Content-Type', 'text/plain').send("OK");
-                }, function (err) {
-                    throwError(response, err);
+    function invokeFinalShutdownSequence(droplet, actionId) {
+        shutdownStatus = "shutting-down";
+        var snapshotActionId = 0;
+        timer = setInterval(function () {
+            console.log("===> [Current: " + shutdownStatus + "]");
+            if (shutdownStatus === "shutting-down") {
+                console.log(" ==> Checking in on action " + actionId);
+                droplet.actionStatus(actionId).then(function (status) {
+                    console.log("  ===> Shutdown Status: " + status);
+                    if (status === "completed") {
+                        shutdownStatus = "powered-off";
+                        droplet.takeSnapshot().then(function (newActionId) {
+                            snapshotActionId = newActionId;
+                        });
+                    } else if (status === "errored") {
+                        shutdownStatus = "incomplete";
+                        clearInterval(timer);
+                    }
                 });
+            } else if (shutdownStatus === "powered-off") {
+                console.log(" ==> Checking in on action " + snapshotActionId);
+                if (snapshotActionId !== 0) {
+                    droplet.actionStatus(snapshotActionId).then(function (status) {
+                        console.log("  ===> Snapshot Status: " + status);
+                        if (status === "completed") {
+                            // TODO : Destroy droplet
+                            shutdownStatus = "backed-up";
+                        } else if (status === "errored") {
+                            shutdownStatus = "incomplete";
+                            clearInterval(timer);
+                        }
+                    });
+                }
+            } else if (shutdownStatus === "backed-up") {
+                console.log("Backed Up");
+                shutdownStatus = "complete";
+                clearInterval(timer);
             }
+        }, 2000);
+    }
+
+    app.get('/physical/shutdown', function (request, response) {
+        dropletFactory.findDroplet(SERVER_NAME).then(function (droplet) {
+            droplet.status().then(function (status) {
+                if (status === "active") {
+                    droplet.stop().then(function (actionId) {
+                        response.set('Content-Type', 'text/plain').send("Shutdown initiated(" + actionId + ")...");
+                        invokeFinalShutdownSequence(droplet, actionId);
+                    }, function (err) {
+                        throwError(response, err);
+                    });
+                }
+            }, function (err) {
+                throwError(response, err);
+            });
         }, function (err) {
             throwError(response, err);
         });
     });
 
-    app.get('/status', function (request, response) {
-        droplet.status().then(function (status) {
-            response.set('Content-Type', 'text/plain').send(status);
+    app.get('/physical/stop', function (request, response) {
+        dropletFactory.findDroplet(SERVER_NAME).then(function (droplet) {
+            droplet.status().then(function (status) {
+                if (status === "active") {
+                    droplet.stop().then(function (actionId) {
+                        response.set('Content-Type', 'text/plain').send("Stop requested: " + actionId);
+                    }, function (err) {
+                        throwError(response, err);
+                    });
+                } else {
+                    response.set('Content-Type', 'text/plain').send("Server already stopped...");
+                }
+            }, function (err) {
+                throwError(response, err);
+            });
         }, function (err) {
             throwError(response, err);
         });
     });
-    
-    app.get('/identify', function (request, response) {
-       
-        dropletScanner.findDropletId(SERVER_NAME).then(function (result) {
-            response.set('Content-Type', 'text/plain').send(result);
+
+    app.get('/physical/start', function (request, response) {
+        dropletFactory.findDroplet(SERVER_NAME).then(function (droplet) {
+            droplet.status().then(function (status) {
+                if (status === "off") {
+                    droplet.start().then(function (actionId) {
+                        response.set('Content-Type', 'text/plain').send("Start requested: " + actionId);
+                    }, function (err) {
+                        throwError(response, err);
+                    });
+                } else {
+                    response.set('Content-Type', 'text/plain').send("Server already running...");
+                }
+            }, function (err) {
+                throwError(response, err);
+            });
         }, function (err) {
             throwError(response, err);
         });
-        
+    });
+
+    app.get('/physical/status', function (request, response) {
+        dropletFactory.findDroplet(SERVER_NAME).then(function (droplet) {
+            droplet.status().then(function (status) {
+                response.set('Content-Type', 'text/plain').send(status);
+            }, function (err) {
+                throwError(response, err);
+            });
+        });
+    });
+
+    app.get('/physical/identify', function (request, response) {
+
+        dropletFactory.findDroplet(SERVER_NAME).then(function (droplet) {
+            response.set('Content-Type', 'text/plain').send(droplet.dropletObject);
+        }, function (err) {
+            throwError(response, err);
+        });
+
     });
 
     app.listen(process.env.PORT || 8080);

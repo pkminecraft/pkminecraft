@@ -9,6 +9,7 @@
     "mc-ping": "~0.0.2",
     "node-rest-client": "^1.0.0",
     "q": "^1.0.1",
+    "restler": "^3.2.2",
     "underscore": "^1.7.0"
   },
   "devDependencies": {
