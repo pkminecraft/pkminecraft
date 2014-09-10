@@ -5,6 +5,7 @@ var Express = require('express'),
     http = require('restler'),
     uc = require('underscore'),
     q = require('q'),
+    moment = require('moment'),
     SECURITY_TOKEN = process.env.DO_TOKEN,
     SERVER_ID = process.env.DO_SERVER_ID,
     SERVER_NAME = process.env.DO_SERVER_NAME,
@@ -41,7 +42,7 @@ function Droplet(id) {
             extendedData = {};
 
         if (extraData !== undefined) {
-            uc.extend(data, data, extraData);
+            uc.extend(data, extraData);
         }
         options.data = JSON.stringify(data);
 
@@ -50,10 +51,14 @@ function Droplet(id) {
 
         http.post(baseUrl + "/actions", options).on('complete', function (data, response) {
             if (data instanceof Error) {
+                console.log("Action rejected for reason: " + data);
                 deferred.reject(data);
             } else if (response.statusCode >= 400) {
+                console.log("Action rejected for status code: " + response.statusCode);
+                console.log("Message: " + JSON.stringify(data));
                 deferred.reject(data.message);
             } else {
+                console.log("Action complete: " + JSON.stringify(data));
                 deferred.resolve(data.action.id);
             }
         });
@@ -77,6 +82,18 @@ function Droplet(id) {
                 deferred.resolve();
             }
         });
+
+        return deferred.promise;
+    };
+
+    this.destroy = function () {
+        var deferred = q.defer(),
+            options = {
+                headers: request
+            };
+
+        http.del(baseUrl, options);
+        deferred.resolve("Deleted droplet: " + id);
 
         return deferred.promise;
     };
@@ -193,6 +210,61 @@ function DropletFactory() {
 
 /**
  *
+ * Image Manager
+ *
+ */
+
+function ImageManager() {
+    "use strict";
+
+    var url = SERVICE_BASE_URL + "/images",
+        request = {
+            "Authorization": "Bearer " + SECURITY_TOKEN,
+            "Content-Type": "application/json"
+        };
+
+    this.cleanupImages = function () {
+        var i = 0,
+            deferred = q.defer(),
+            options = {
+                headers: request
+            };
+
+        http.get(url, options).on('complete', function (data, response) {
+            if (data instanceof Error) {
+                deferred.reject(data);
+            } else if (response.statusCode >= 400) {
+                deferred.reject(data.message);
+            } else {
+                var images = data.images,
+                    maxCreationDate = moment(0),
+                    imageCreationDate,
+                    imageToKeep = -1,
+                    deleteUrl;
+
+                for (i = 0; i < images.length; i++) {
+                    imageCreationDate = moment(images[i].created_at);
+                    if ((images[i].name === "minecraft-save") && (imageCreationDate.diff(maxCreationDate) > 0)) {
+                        maxCreationDate = imageCreationDate;
+                        imageToKeep = images[i].id;
+                    }
+                }
+                for (i = 0; i < images.length; i++) {
+                    if ((images[i].name === "minecraft-save") && (images[i].id !== imageToKeep)) {
+                        deleteUrl = url + "/" + images[i].id;
+                        http.del(deleteUrl, options);
+                    }
+                }
+                deferred.resolve("Complete - Kept image " + imageToKeep);
+            }
+        });
+
+        return deferred.promise;
+    };
+}
+
+/**
+ *
  * Main Application
  *
  */
@@ -202,6 +274,7 @@ function main() {
         droplet = new Droplet(SERVER_ID),
         shutdownStatus = "not-invoked",
         dropletFactory = new DropletFactory(),
+        imageManager = new ImageManager(),
         timer;
 
     function throwError(response, message) {
@@ -222,9 +295,6 @@ function main() {
                     console.log("  ===> Shutdown Status: " + status);
                     if (status === "completed") {
                         shutdownStatus = "powered-off";
-                        droplet.takeSnapshot().then(function (newActionId) {
-                            snapshotActionId = newActionId;
-                        });
                     } else if (status === "errored") {
                         shutdownStatus = "incomplete";
                         clearInterval(timer);
@@ -243,9 +313,15 @@ function main() {
                             clearInterval(timer);
                         }
                     });
+                } else {
+                    droplet.takeSnapshot().then(function (newActionId) {
+                        snapshotActionId = newActionId;
+                    });
                 }
             } else if (shutdownStatus === "backed-up") {
                 console.log("Backed Up");
+                imageManager.cleanupImages();
+                droplet.destroy();
                 shutdownStatus = "complete";
                 clearInterval(timer);
             }
@@ -291,6 +367,26 @@ function main() {
         });
     });
 
+    app.get('/physical/snapshot', function (request, response) {
+        dropletFactory.findDroplet(SERVER_NAME).then(function (droplet) {
+            droplet.status().then(function (status) {
+                if (status === "off") {
+                    droplet.takeSnapshot().then(function (actionId) {
+                        response.set('Content-Type', 'text/plain').send("Snapshot requested: " + actionId);
+                    }, function (err) {
+                        throwError(response, err);
+                    });
+                } else {
+                    response.set('Content-Type', 'text/plain').send("Server must be stopped, first...");
+                }
+            }, function (err) {
+                throwError(response, err);
+            });
+        }, function (err) {
+            throwError(response, err);
+        });
+    });
+
     app.get('/physical/start', function (request, response) {
         dropletFactory.findDroplet(SERVER_NAME).then(function (droplet) {
             droplet.status().then(function (status) {
@@ -325,6 +421,16 @@ function main() {
 
         dropletFactory.findDroplet(SERVER_NAME).then(function (droplet) {
             response.set('Content-Type', 'text/plain').send(droplet.dropletObject);
+        }, function (err) {
+            throwError(response, err);
+        });
+
+    });
+
+    app.get('/physical/cleanup', function (request, response) {
+
+        imageManager.cleanupImages().then(function (message) {
+            response.set('Content-Type', 'text/plain').send(message);
         }, function (err) {
             throwError(response, err);
         });
