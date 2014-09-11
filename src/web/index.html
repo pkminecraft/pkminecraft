@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Minecraft Server Control</title>
+
+    <!-- Bootstrap -->
+    <link href="../../bower_components/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="../../bower_components/bootstrap/dist/css/bootstrap-theme.min.css" rel="stylesheet">
+    <link href="css/application.css" rel="stylesheet">
+
+</head>
+
+<body>
+    <div class="navbar navbar-inverse navbar-fixed-top" role="navigation">
+        <div class="container">
+            <div class="navbar-header">
+                <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target=".navbar-collapse">
+                    <span class="sr-only">Toggle navigation</span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                </button>
+                <a class="navbar-brand" href="#">Minecraft Server Control</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="container" role="main">
+
+        <div class="page-header">
+            <h3>Control Panel</h3>
+        </div>
+
+        <table class="table">
+            <tr>
+                <th>Server</th>
+                <th>Status</th>
+                <th>Compound Actions</th>
+                <th>Discrete Actions</th>
+            </tr>
+            <tr>
+                <td>minecraft.paulkimbrel.com</td>
+                <td>N/A</td>
+                <td>
+                    <div class="btn-group compound">
+                        <button type="button" class="btn btn-success">
+                            <span class="glyphicon glyphicon-play-circle"></span>
+                        </button>
+                        <button type="button" class="btn btn-danger">
+                            <span class="glyphicon glyphicon-remove-circle"></span>
+                        </button>
+                    </div>
+                </td>
+                <td>
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-default">
+                            <span class="glyphicon glyphicon-play"></span>
+                        </button>
+                        <button type="button" class="btn btn-default">
+                            <span class="glyphicon glyphicon-pause"></span>
+                        </button>
+                        <button type="button" class="btn btn-default">
+                            <span class="glyphicon glyphicon-camera"></span>
+                        </button>
+                        <button type="button" class="btn btn-default">
+                            <span class="glyphicon glyphicon-refresh"></span>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        </table>
+    </div>
+    <!-- /.container -->
+
+    <script src="../../bower_components/jquery/dist/jquery.min.js"></script>
+    <script src="../../bower_components/bootstrap/dist/js/bootstrap.min.js"></script>
+</body>
+
+</html>

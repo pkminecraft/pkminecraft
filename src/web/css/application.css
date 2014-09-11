@@ -1,0 +1,17 @@
+body {
+    padding-top: 50px;
+}
+.starter-template {
+    padding: 40px 15px;
+    text-align: center;
+}
+.page-header {
+    border: 0;
+}
+.table > tbody > tr > td {
+    vertical-align: bottom;
+    line-height: 35px;
+}
+.compound span {
+    font-size: 1.5em;
+}
