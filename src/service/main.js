@@ -193,7 +193,7 @@ function DropletFactory() {
 
         options.data = JSON.stringify(data);
 
-        http.post(SERVICE_BASE_URL, options).on('complete', function (data, response) {
+        http.post(url, options).on('complete', function (data, response) {
             if (data instanceof Error) {
                 console.log("Create rejected for reason: " + data);
                 deferred.reject(data);
@@ -344,9 +344,11 @@ function main() {
         dropletFactory = new DropletFactory(),
         imageManager = new ImageManager(),
         timer;
-    
-    app.use(cors({origin: '*'}));
-    
+
+    app.use(cors({
+        origin: '*'
+    }));
+
     function throwError(response, message) {
         console.log("Error message: " + message);
         response.set('Content-Type', 'application/json').status(500).send({
@@ -496,6 +498,8 @@ function main() {
             }, function (err) {
                 throwError(response, err);
             });
+        }, function () {
+            throwError(response, "No server found");
         });
     });
 
