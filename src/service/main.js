@@ -2,6 +2,7 @@
 /*jslint plusplus: true */
 
 var Express = require('express'),
+    cors = require('cors'),
     http = require('restler'),
     uc = require('underscore'),
     q = require('q'),
@@ -276,7 +277,9 @@ function main() {
         dropletFactory = new DropletFactory(),
         imageManager = new ImageManager(),
         timer;
-
+    
+    app.use(cors({origin: '*'}));
+    
     function throwError(response, message) {
         console.log("Error message: " + message);
         response.set('Content-Type', 'application/json').status(500).send({
