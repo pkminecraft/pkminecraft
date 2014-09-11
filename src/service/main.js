@@ -1,4 +1,4 @@
-/*global require, process, console */
+/*global require, process, console, setInterval, clearInterval */
 /*jslint plusplus: true */
 
 var Express = require('express'),
@@ -175,6 +175,40 @@ function DropletFactory() {
         });
     }
 
+    this.createDroplet = function (imageKey) {
+        var deferred = q.defer(),
+            options = {
+                data: null,
+                headers: request
+            },
+            data = {
+                "name": SERVER_NAME,
+                "region": "nyc3",
+                "size": "2gb",
+                "image": imageKey
+            };
+
+        console.log(JSON.stringify(data));
+
+        options.data = JSON.stringify(data);
+
+        http.post(SERVICE_BASE_URL, options).on('complete', function (data, response) {
+            if (data instanceof Error) {
+                console.log("Create rejected for reason: " + data);
+                deferred.reject(data);
+            } else if (response.statusCode >= 400) {
+                console.log("Create rejected for status code: " + response.statusCode);
+                console.log("Message: " + JSON.stringify(data));
+                deferred.reject(data.message);
+            } else {
+                deferred.resolve("Creation request completed");
+            }
+        });
+        deferred.resolve("Creation request completed");
+
+        return deferred.promise;
+    };
+
     /**
      * Promise-based function that returns a droplet if found:
      */
@@ -222,6 +256,39 @@ function ImageManager() {
             "Authorization": "Bearer " + SECURITY_TOKEN,
             "Content-Type": "application/json"
         };
+
+    this.getMostRecentImage = function () {
+        var i = 0,
+            deferred = q.defer(),
+            options = {
+                headers: request
+            };
+
+        http.get(url, options).on('complete', function (data, response) {
+            if (data instanceof Error) {
+                deferred.reject(data);
+            } else if (response.statusCode >= 400) {
+                deferred.reject(data.message);
+            } else {
+                var images = data.images,
+                    maxCreationDate = moment(0),
+                    imageCreationDate,
+                    imageToKeep = -1,
+                    deleteUrl;
+
+                for (i = 0; i < images.length; i++) {
+                    imageCreationDate = moment(images[i].created_at);
+                    if ((images[i].name === "minecraft-save") && (imageCreationDate.diff(maxCreationDate) > 0)) {
+                        maxCreationDate = imageCreationDate;
+                        imageToKeep = images[i].id;
+                    }
+                }
+                deferred.resolve(imageToKeep);
+            }
+        });
+
+        return deferred.promise;
+    };
 
     this.cleanupImages = function () {
         var i = 0,
@@ -339,6 +406,18 @@ function main() {
                         throwError(response, err);
                     });
                 }
+            }, function (err) {
+                throwError(response, err);
+            });
+        }, function (err) {
+            throwError(response, err);
+        });
+    });
+
+    app.get('/physical/create', function (request, response) {
+        imageManager.getMostRecentImage().then(function (imageKey) {
+            dropletFactory.createDroplet(imageKey).then(function () {
+                response.set('Content-Type', 'text/plain').send("Create requested.  Don't do it again.");
             }, function (err) {
                 throwError(response, err);
             });
