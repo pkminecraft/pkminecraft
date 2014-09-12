@@ -1,4 +1,4 @@
-/*globals console, angular */
+/*globals console, angular, setInterval, clearInterval */
 var pkminecraft = angular.module("pkminecraft", [])
     .constant("DATA_ROOT", "http://localhost:8080")
     .value("debug", false);
@@ -56,6 +56,7 @@ pkminecraft.run(['$http', '$rootScope', '$q', 'DATA_ROOT',
         };
 
         $rootScope.refreshStatus = function () {
+            console.log("Refreshing...");
             $http.get(DATA_ROOT + "/physical/status").success(function (data) {
                 $rootScope.status = data;
                 if (data === clearStatus) {
