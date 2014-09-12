@@ -8,7 +8,7 @@ var Express = require('express'),
     q = require('q'),
     moment = require('moment'),
     SECURITY_TOKEN = process.env.DO_TOKEN,
-    SERVER_ID = process.env.DO_SERVER_ID,
+    IMAGE_NAME = process.env.DO_IMAGE_NAME,
     SERVER_NAME = process.env.DO_SERVER_NAME,
     SERVICE_BASE_URL = "https://api.digitalocean.com/v2";
 
@@ -144,7 +144,7 @@ function Droplet(id) {
 
     this.takeSnapshot = function () {
         return executeAction("snapshot", {
-            name: "minecraft-save"
+            name: IMAGE_NAME
         });
     };
 }
@@ -279,7 +279,7 @@ function ImageManager() {
 
                 for (i = 0; i < images.length; i++) {
                     imageCreationDate = moment(images[i].created_at);
-                    if ((images[i].name === "minecraft-save") && (imageCreationDate.diff(maxCreationDate) > 0)) {
+                    if ((images[i].name === IMAGE_NAME) && (imageCreationDate.diff(maxCreationDate) > 0)) {
                         maxCreationDate = imageCreationDate;
                         imageToKeep = images[i].id;
                     }
@@ -312,13 +312,13 @@ function ImageManager() {
 
                 for (i = 0; i < images.length; i++) {
                     imageCreationDate = moment(images[i].created_at);
-                    if ((images[i].name === "minecraft-save") && (imageCreationDate.diff(maxCreationDate) > 0)) {
+                    if ((images[i].name === IMAGE_NAME) && (imageCreationDate.diff(maxCreationDate) > 0)) {
                         maxCreationDate = imageCreationDate;
                         imageToKeep = images[i].id;
                     }
                 }
                 for (i = 0; i < images.length; i++) {
-                    if ((images[i].name === "minecraft-save") && (images[i].id !== imageToKeep)) {
+                    if ((images[i].name === IMAGE_NAME) && (images[i].id !== imageToKeep)) {
                         deleteUrl = url + "/" + images[i].id;
                         http.del(deleteUrl, options);
                     }
@@ -339,7 +339,7 @@ function ImageManager() {
 function main() {
     "use strict";
     var app = new Express(),
-        droplet = new Droplet(SERVER_ID),
+        droplet,
         shutdownStatus = "not-invoked",
         dropletFactory = new DropletFactory(),
         imageManager = new ImageManager(),
