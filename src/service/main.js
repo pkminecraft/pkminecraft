@@ -349,6 +349,8 @@ function main() {
         origin: '*'
     }));
 
+    app.use(Express["static"]('/Users/pkimbrel/local/sites/pkminecraft'));
+
     function throwError(response, message) {
         console.log("Error message: " + message);
         response.set('Content-Type', 'application/json').status(500).send({
