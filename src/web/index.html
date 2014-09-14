@@ -38,17 +38,17 @@
             <h3>Control Panel</h3>
         </div>
 
-        <table class="table">
+        <table class="table" ng-controller="servers">
             <tr>
                 <th>Server</th>
                 <th>Status</th>
                 <th>Compound Actions</th>
                 <th>Discrete Actions</th>
             </tr>
-            <tr>
-                <td>minecraft.paulkimbrel.com</td>
+            <tr ng-repeat="server in servers">
+                <td>{{server.name}}.paulkimbrel.com</td>
                 <td>
-                    <span class="wait" ng-show="message"> </span>{{status}}
+                    <span class="wait" ng-show="message"> </span>{{server.status}}
                 </td>
                 <td>
                     <div class="btn-group compound">

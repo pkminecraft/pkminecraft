@@ -1,4 +1,5 @@
 /*globals console, angular, setInterval, clearInterval */
+/*jslint white: true */
 var pkminecraft = angular.module("pkminecraft", [])
     .constant("DATA_ROOT", "http://localhost:8080")
     .value("debug", false);
@@ -55,21 +56,55 @@ pkminecraft.run(['$http', '$rootScope', '$q', 'DATA_ROOT',
             executeCommand("snapshot");
         };
 
-        $rootScope.refreshStatus = function () {
+    }
+]);
+
+pkminecraft.controller("servers", ['$http', '$rootScope', '$scope', '$q', 'DATA_ROOT',
+    function ($http, $rootScope, $scope, $q, DATA_ROOT) {
+        "use strict";
+
+        var timer,
+            clearStatus = "blueberry";
+
+        $scope.refreshStatus = function (serverName) {
             console.log("Refreshing...");
-            $http.get(DATA_ROOT + "/physical/status").success(function (data) {
-                $rootScope.status = data;
+            var deferred = $q.defer();
+            $http.get(DATA_ROOT + "/" + serverName + "/status").success(function (data) {
+                deferred.resolve(data);
                 if (data === clearStatus) {
                     clearInterval(timer);
                     $rootScope.message = "";
                 }
             }).error(function (ex) {
-                $rootScope.status = "No Server";
+                deferred.resolve("No Server");
                 clearInterval(timer);
                 $rootScope.message = "";
-                console.log(ex);
+                console.log("Unable to get status");
+            });
+            deferred.promise().then(function (finalStatus) {
+                var index, serverDetails;
+                for (index in $scope.servers) {
+                    if ($scope.servers.hasOwnProperty(index)) {
+                        serverDetails = $scope.servers[index];
+                        serverDetails.status = finalStatus;
+                    }
+                }
             });
         };
 
-        $rootScope.refreshStatus();
-    }]);
+        $http.get(DATA_ROOT + "/servers").success(function (data) {
+            var index, server, serverDetails, serverList = data;
+            $scope.servers = [];
+            for (index in serverList) {
+                if (serverList.hasOwnProperty(index)) {
+                    server = serverList[index];
+                    serverDetails = {
+                        "name": server
+                    };
+                    $scope.servers.push(serverDetails);
+                    $scope.refreshStatus(server);
+                }
+            }
+        });
+    }
+]);

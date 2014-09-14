@@ -8,9 +8,9 @@ var Express = require('express'),
     q = require('q'),
     moment = require('moment'),
     SECURITY_TOKEN = process.env.DO_TOKEN,
-    IMAGE_NAME = process.env.DO_IMAGE_NAME,
-    SERVER_NAME = process.env.DO_SERVER_NAME,
-    SERVICE_BASE_URL = "https://api.digitalocean.com/v2";
+    ROOT_DIR = process.env.ROOT_DIR,
+    SERVICE_BASE_URL = "https://api.digitalocean.com/v2",
+    SERVERS = ["techworld2"];
 
 /**
  *
@@ -142,9 +142,9 @@ function Droplet(id) {
         return executeAction("reboot");
     };
 
-    this.takeSnapshot = function () {
+    this.takeSnapshot = function (serverName) {
         return executeAction("snapshot", {
-            name: IMAGE_NAME
+            name: serverName + "-save"
         });
     };
 }
@@ -176,14 +176,14 @@ function DropletFactory() {
         });
     }
 
-    this.createDroplet = function (imageKey) {
+    this.createDroplet = function (serverName, imageKey) {
         var deferred = q.defer(),
             options = {
                 data: null,
                 headers: request
             },
             data = {
-                "name": SERVER_NAME,
+                "name": serverName + ".paulkimbrel.com",
                 "region": "nyc3",
                 "size": "2gb",
                 "image": imageKey
@@ -213,7 +213,7 @@ function DropletFactory() {
     /**
      * Promise-based function that returns a droplet if found:
      */
-    this.findDroplet = function (nameOfDropletToFind) {
+    this.findDroplet = function (serverName) {
         var i = 0,
             deferred = q.defer(),
             options = {
@@ -228,7 +228,7 @@ function DropletFactory() {
             } else {
                 var droplets = data.droplets;
                 for (i = 0; i < droplets.length; i++) {
-                    if (droplets[i].name === nameOfDropletToFind) {
+                    if (droplets[i].name === serverName + ".paulkimbrel.com") {
                         buildDroplet(droplets[i].id, deferred);
                         break;
                     }
@@ -258,7 +258,7 @@ function ImageManager() {
             "Content-Type": "application/json"
         };
 
-    this.getMostRecentImage = function () {
+    this.getMostRecentImage = function (serverName) {
         var i = 0,
             deferred = q.defer(),
             options = {
@@ -279,7 +279,7 @@ function ImageManager() {
 
                 for (i = 0; i < images.length; i++) {
                     imageCreationDate = moment(images[i].created_at);
-                    if ((images[i].name === IMAGE_NAME) && (imageCreationDate.diff(maxCreationDate) > 0)) {
+                    if ((images[i].name === serverName + "-save") && (imageCreationDate.diff(maxCreationDate) > 0)) {
                         maxCreationDate = imageCreationDate;
                         imageToKeep = images[i].id;
                     }
@@ -291,7 +291,7 @@ function ImageManager() {
         return deferred.promise;
     };
 
-    this.cleanupImages = function () {
+    this.cleanupImages = function (serverName) {
         var i = 0,
             deferred = q.defer(),
             options = {
@@ -312,13 +312,13 @@ function ImageManager() {
 
                 for (i = 0; i < images.length; i++) {
                     imageCreationDate = moment(images[i].created_at);
-                    if ((images[i].name === IMAGE_NAME) && (imageCreationDate.diff(maxCreationDate) > 0)) {
+                    if ((images[i].name === serverName + "-save") && (imageCreationDate.diff(maxCreationDate) > 0)) {
                         maxCreationDate = imageCreationDate;
                         imageToKeep = images[i].id;
                     }
                 }
                 for (i = 0; i < images.length; i++) {
-                    if ((images[i].name === IMAGE_NAME) && (images[i].id !== imageToKeep)) {
+                    if ((images[i].name === serverName + "-save") && (images[i].id !== imageToKeep)) {
                         deleteUrl = url + "/" + images[i].id;
                         http.del(deleteUrl, options);
                     }
@@ -349,7 +349,7 @@ function main() {
         origin: '*'
     }));
 
-    app.use(Express["static"]('/Users/pkimbrel/local/sites/pkminecraft'));
+    app.use(Express["static"](ROOT_DIR));
 
     function throwError(response, message) {
         console.log("Error message: " + message);
@@ -358,7 +358,15 @@ function main() {
         });
     }
 
-    function invokeFinalShutdownSequence(droplet, actionId) {
+    function checkServer(serverName) {
+        if (SERVERS.indexOf(serverName) === -1) {
+            throw "Server not supported";
+        }
+
+        return serverName;
+    }
+
+    function invokeFinalShutdownSequence(serverName, droplet, actionId) {
         shutdownStatus = "shutting-down";
         var snapshotActionId = 0;
         timer = setInterval(function () {
@@ -388,13 +396,13 @@ function main() {
                         }
                     });
                 } else {
-                    droplet.takeSnapshot().then(function (newActionId) {
+                    droplet.takeSnapshot(serverName).then(function (newActionId) {
                         snapshotActionId = newActionId;
                     });
                 }
             } else if (shutdownStatus === "backed-up") {
                 console.log("Backed Up");
-                imageManager.cleanupImages();
+                imageManager.cleanupImages(serverName);
                 droplet.destroy();
                 shutdownStatus = "complete";
                 clearInterval(timer);
@@ -402,13 +410,14 @@ function main() {
         }, 2000);
     }
 
-    app.get('/physical/shutdown', function (request, response) {
-        dropletFactory.findDroplet(SERVER_NAME).then(function (droplet) {
+    app.get('/:server/shutdown', function (request, response) {
+        var serverName = request.params.server;
+        dropletFactory.findDroplet(serverName).then(function (droplet) {
             droplet.status().then(function (status) {
                 if (status === "active") {
                     droplet.stop().then(function (actionId) {
                         response.set('Content-Type', 'text/plain').send("Shutdown initiated(" + actionId + ")...");
-                        invokeFinalShutdownSequence(droplet, actionId);
+                        invokeFinalShutdownSequence(serverName, droplet, actionId);
                     }, function (err) {
                         throwError(response, err);
                     });
@@ -421,9 +430,10 @@ function main() {
         });
     });
 
-    app.get('/physical/create', function (request, response) {
-        imageManager.getMostRecentImage().then(function (imageKey) {
-            dropletFactory.createDroplet(imageKey).then(function () {
+    app.get('/:server/create', function (request, response) {
+        var serverName = checkServer(request.params.server);
+        imageManager.getMostRecentImage(serverName).then(function (imageKey) {
+            dropletFactory.createDroplet(serverName, imageKey).then(function () {
                 response.set('Content-Type', 'text/plain').send("Create requested.  Don't do it again.");
             }, function (err) {
                 throwError(response, err);
@@ -433,8 +443,9 @@ function main() {
         });
     });
 
-    app.get('/physical/stop', function (request, response) {
-        dropletFactory.findDroplet(SERVER_NAME).then(function (droplet) {
+    app.get('/:server/stop', function (request, response) {
+        var serverName = checkServer(request.params.server);
+        dropletFactory.findDroplet(serverName).then(function (droplet) {
             droplet.status().then(function (status) {
                 if (status === "active") {
                     droplet.stop().then(function (actionId) {
@@ -453,8 +464,9 @@ function main() {
         });
     });
 
-    app.get('/physical/snapshot', function (request, response) {
-        dropletFactory.findDroplet(SERVER_NAME).then(function (droplet) {
+    app.get('/:server/snapshot', function (request, response) {
+        var serverName = checkServer(request.params.server);
+        dropletFactory.findDroplet(serverName).then(function (droplet) {
             droplet.status().then(function (status) {
                 if (status === "off") {
                     droplet.takeSnapshot().then(function (actionId) {
@@ -473,8 +485,9 @@ function main() {
         });
     });
 
-    app.get('/physical/start', function (request, response) {
-        dropletFactory.findDroplet(SERVER_NAME).then(function (droplet) {
+    app.get('/:server/start', function (request, response) {
+        var serverName = request.params.server;
+        dropletFactory.findDroplet(serverName).then(function (droplet) {
             droplet.status().then(function (status) {
                 if (status === "off") {
                     droplet.start().then(function (actionId) {
@@ -493,8 +506,10 @@ function main() {
         });
     });
 
-    app.get('/physical/status', function (request, response) {
-        dropletFactory.findDroplet(SERVER_NAME).then(function (droplet) {
+    app.get('/:server/status', function (request, response) {
+        var serverName = checkServer(request.params.server);
+        console.log("Server: " + serverName);
+        dropletFactory.findDroplet(serverName).then(function (droplet) {
             droplet.status().then(function (status) {
                 response.set('Content-Type', 'text/plain').send(status);
             }, function (err) {
@@ -505,9 +520,9 @@ function main() {
         });
     });
 
-    app.get('/physical/identify', function (request, response) {
-
-        dropletFactory.findDroplet(SERVER_NAME).then(function (droplet) {
+    app.get('/:server/identify', function (request, response) {
+        var serverName = checkServer(request.params.server);
+        dropletFactory.findDroplet(serverName).then(function (droplet) {
             response.set('Content-Type', 'text/plain').send(droplet.dropletObject);
         }, function (err) {
             throwError(response, err);
@@ -515,8 +530,12 @@ function main() {
 
     });
 
-    app.get('/physical/cleanup', function (request, response) {
+    app.get('/servers', function (request, response) {
+        response.set('Content-Type', 'text/plain').send(SERVERS);
+    });
 
+    app.get('/cleanup', function (request, response) {
+        var serverName = checkServer(request.params.server);
         imageManager.cleanupImages().then(function (message) {
             response.set('Content-Type', 'text/plain').send(message);
         }, function (err) {
