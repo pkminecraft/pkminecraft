@@ -52,26 +52,26 @@
                 </td>
                 <td>
                     <div class="btn-group compound">
-                        <button type="button" class="btn btn-success" ng-click="startup()">
+                        <button type="button" class="btn btn-success" ng-click="startup(server.name)">
                             <span class="glyphicon glyphicon-play-circle"></span>
                         </button>
-                        <button type="button" class="btn btn-danger" ng-click="shutdown()">
+                        <button type="button" class="btn btn-danger" ng-click="shutdown(server.name)">
                             <span class="glyphicon glyphicon-remove-circle"></span>
                         </button>
                     </div>
                 </td>
                 <td>
                     <div class="btn-group">
-                        <button type="button" class="btn btn-default" ng-click="start()">
+                        <button type="button" class="btn btn-default" ng-click="start(server.name)">
                             <span class="glyphicon glyphicon-play"></span>
                         </button>
-                        <button type="button" class="btn btn-default" ng-click="stop()">
+                        <button type="button" class="btn btn-default" ng-click="stop(server.name)">
                             <span class="glyphicon glyphicon-pause"></span>
                         </button>
-                        <button type="button" class="btn btn-default" ng-click="snapshot()">
+                        <button type="button" class="btn btn-default" ng-click="snapshot(server.name)">
                             <span class="glyphicon glyphicon-camera"></span>
                         </button>
-                        <button type="button" class="btn btn-default" ng-click="refreshStatus()">
+                        <button type="button" class="btn btn-default" ng-click="refreshStatus(server.name)">
                             <span class="glyphicon glyphicon-refresh"></span>
                         </button>
                     </div>

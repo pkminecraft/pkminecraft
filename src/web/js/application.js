@@ -2,18 +2,24 @@
 /*jslint white: true */
 var pkminecraft = angular.module("pkminecraft", [])
     .constant("DATA_ROOT", "http://localhost:8080")
-    .value("debug", false);
+    .value("debug", true);
 
 pkminecraft.run(['$http', '$rootScope', '$q', 'DATA_ROOT',
     function ($http, $rootScope, $q, DATA_ROOT) {
+        "use strict";
+    }
+]);
+
+pkminecraft.controller("servers", ['$http', '$rootScope', '$scope', '$q', 'DATA_ROOT',
+    function ($http, $rootScope, $scope, $q, DATA_ROOT) {
         "use strict";
 
         var timer,
             clearStatus = "blueberry";
 
-        function executeCommand(command) {
+        function executeCommand(serverName, command) {
             $rootScope.error = "";
-            $http.get(DATA_ROOT + "/physical/" + command).success(function (data) {
+            $http.get(DATA_ROOT + "/" + serverName + "/" + command).success(function (data) {
                 $rootScope.message = data;
             }).error(function (ex) {
                 if (typeof ex === "object") {
@@ -30,45 +36,33 @@ pkminecraft.run(['$http', '$rootScope', '$q', 'DATA_ROOT',
             timer = setInterval($rootScope.refreshStatus, 2000);
         }
 
-        $rootScope.status = "N/A";
-
-        $rootScope.startup = function () {
-            executeCommand("create");
+        $scope.startup = function (serverName) {
+            executeCommand(serverName, "create");
             startTimer("active");
         };
 
-        $rootScope.shutdown = function () {
-            executeCommand("shutdown");
+        $scope.shutdown = function (serverName) {
+            executeCommand(serverName, "shutdown");
             startTimer("off");
         };
 
-        $rootScope.start = function () {
-            executeCommand("start");
+        $scope.start = function (serverName) {
+            executeCommand(serverName, "start");
             startTimer("active");
         };
 
-        $rootScope.stop = function () {
-            executeCommand("stop");
+        $scope.stop = function (serverName) {
+            executeCommand(serverName, "stop");
             startTimer("off");
         };
 
-        $rootScope.snapshot = function () {
-            executeCommand("snapshot");
+        $scope.snapshot = function (serverName) {
+            executeCommand(serverName, "snapshot");
         };
-
-    }
-]);
-
-pkminecraft.controller("servers", ['$http', '$rootScope', '$scope', '$q', 'DATA_ROOT',
-    function ($http, $rootScope, $scope, $q, DATA_ROOT) {
-        "use strict";
-
-        var timer,
-            clearStatus = "blueberry";
 
         $scope.refreshStatus = function (serverName) {
             console.log("Refreshing...");
-            var deferred = $q.defer();
+            var promise, deferred = $q.defer();
             $http.get(DATA_ROOT + "/" + serverName + "/status").success(function (data) {
                 deferred.resolve(data);
                 if (data === clearStatus) {
@@ -81,12 +75,15 @@ pkminecraft.controller("servers", ['$http', '$rootScope', '$scope', '$q', 'DATA_
                 $rootScope.message = "";
                 console.log("Unable to get status");
             });
-            deferred.promise().then(function (finalStatus) {
+            promise = deferred.promise;
+            promise.then(function (finalStatus) {
                 var index, serverDetails;
                 for (index in $scope.servers) {
                     if ($scope.servers.hasOwnProperty(index)) {
                         serverDetails = $scope.servers[index];
-                        serverDetails.status = finalStatus;
+                        if (serverDetails.name === serverName) {
+                            serverDetails.status = finalStatus;
+                        }
                     }
                 }
             });

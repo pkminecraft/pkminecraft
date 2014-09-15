@@ -10,7 +10,7 @@ var Express = require('express'),
     SECURITY_TOKEN = process.env.DO_TOKEN,
     ROOT_DIR = process.env.ROOT_DIR,
     SERVICE_BASE_URL = "https://api.digitalocean.com/v2",
-    SERVERS = ["techworld2"];
+    SERVERS = ["techworld2", "crashlanding"];
 
 /**
  *
@@ -345,11 +345,11 @@ function main() {
         imageManager = new ImageManager(),
         timer;
 
+    app.use(Express["static"](ROOT_DIR));
+
     app.use(cors({
         origin: '*'
     }));
-
-    app.use(Express["static"](ROOT_DIR));
 
     function throwError(response, message) {
         console.log("Error message: " + message);
@@ -469,7 +469,7 @@ function main() {
         dropletFactory.findDroplet(serverName).then(function (droplet) {
             droplet.status().then(function (status) {
                 if (status === "off") {
-                    droplet.takeSnapshot().then(function (actionId) {
+                    droplet.takeSnapshot(serverName).then(function (actionId) {
                         response.set('Content-Type', 'text/plain').send("Snapshot requested: " + actionId);
                     }, function (err) {
                         throwError(response, err);
@@ -508,7 +508,6 @@ function main() {
 
     app.get('/:server/status', function (request, response) {
         var serverName = checkServer(request.params.server);
-        console.log("Server: " + serverName);
         dropletFactory.findDroplet(serverName).then(function (droplet) {
             droplet.status().then(function (status) {
                 response.set('Content-Type', 'text/plain').send(status);
