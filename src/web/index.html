@@ -42,13 +42,17 @@
             <tr>
                 <th>Server</th>
                 <th>Status</th>
+                <th>IP Address</th>
                 <th>Compound Actions</th>
                 <th>Discrete Actions</th>
             </tr>
             <tr ng-repeat="server in servers">
                 <td>{{server.name}}.paulkimbrel.com</td>
                 <td>
-                    <span class="wait" ng-show="message"> </span>{{server.status}}
+                    <span class="wait" ng-show="message"> </span>{{server.status.status}}
+                </td>
+                <td>
+                    {{server.status.ipaddress}}
                 </td>
                 <td>
                     <div class="btn-group compound">

@@ -70,7 +70,9 @@ pkminecraft.controller("servers", ['$http', '$rootScope', '$scope', '$q', 'DATA_
                     $rootScope.message = "";
                 }
             }).error(function (ex) {
-                deferred.resolve("No Server");
+                deferred.resolve({
+                    status: "No Server"
+                });
                 clearInterval(timer);
                 $rootScope.message = "";
                 console.log("Unable to get status");

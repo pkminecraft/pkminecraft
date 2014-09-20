@@ -103,7 +103,12 @@ function Droplet(id) {
         var deferred = q.defer();
 
         this.load().then(function (droplet) {
-            deferred.resolve(obj.dropletObject.status);
+            var status = {
+                "status": obj.dropletObject.status,
+                "ipaddress": obj.dropletObject.networks.v4[0].ip_address
+            };
+
+            deferred.resolve(status);
         }, function () {
             deferred.reject("Cannot get status");
         });
@@ -414,7 +419,7 @@ function main() {
         var serverName = request.params.server;
         dropletFactory.findDroplet(serverName).then(function (droplet) {
             droplet.status().then(function (status) {
-                if (status === "active") {
+                if (status.status === "active") {
                     droplet.stop().then(function (actionId) {
                         response.set('Content-Type', 'text/plain').send("Shutdown initiated(" + actionId + ")...");
                         invokeFinalShutdownSequence(serverName, droplet, actionId);
@@ -447,7 +452,7 @@ function main() {
         var serverName = checkServer(request.params.server);
         dropletFactory.findDroplet(serverName).then(function (droplet) {
             droplet.status().then(function (status) {
-                if (status === "active") {
+                if (status.status === "active") {
                     droplet.stop().then(function (actionId) {
                         response.set('Content-Type', 'text/plain').send("Stop requested: " + actionId);
                     }, function (err) {
@@ -468,7 +473,7 @@ function main() {
         var serverName = checkServer(request.params.server);
         dropletFactory.findDroplet(serverName).then(function (droplet) {
             droplet.status().then(function (status) {
-                if (status === "off") {
+                if (status.status === "off") {
                     droplet.takeSnapshot(serverName).then(function (actionId) {
                         response.set('Content-Type', 'text/plain').send("Snapshot requested: " + actionId);
                     }, function (err) {
@@ -489,7 +494,7 @@ function main() {
         var serverName = request.params.server;
         dropletFactory.findDroplet(serverName).then(function (droplet) {
             droplet.status().then(function (status) {
-                if (status === "off") {
+                if (status.status === "off") {
                     droplet.start().then(function (actionId) {
                         response.set('Content-Type', 'text/plain').send("Start requested: " + actionId);
                     }, function (err) {
@@ -510,7 +515,7 @@ function main() {
         var serverName = checkServer(request.params.server);
         dropletFactory.findDroplet(serverName).then(function (droplet) {
             droplet.status().then(function (status) {
-                response.set('Content-Type', 'text/plain').send(status);
+                response.set('Content-Type', 'application/json').send(status);
             }, function (err) {
                 throwError(response, err);
             });
