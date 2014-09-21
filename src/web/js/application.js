@@ -33,7 +33,7 @@ pkminecraft.controller("servers", ['$http', '$rootScope', '$scope', '$q', 'DATA_
 
         function startTimer(stopStatus) {
             clearStatus = stopStatus;
-            timer = setInterval($rootScope.refreshStatus, 2000);
+            timer = setInterval($scope.refreshStatus, 2000);
         }
 
         $scope.startup = function (serverName) {
@@ -65,7 +65,7 @@ pkminecraft.controller("servers", ['$http', '$rootScope', '$scope', '$q', 'DATA_
             var promise, deferred = $q.defer();
             $http.get(DATA_ROOT + "/" + serverName + "/status").success(function (data) {
                 deferred.resolve(data);
-                if (data === clearStatus) {
+                if (data.status === clearStatus) {
                     clearInterval(timer);
                     $rootScope.message = "";
                 }

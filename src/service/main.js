@@ -190,7 +190,7 @@ function DropletFactory() {
             data = {
                 "name": serverName + ".paulkimbrel.com",
                 "region": "nyc3",
-                "size": "2gb",
+                "size": "4gb",
                 "image": imageKey
             };
 
