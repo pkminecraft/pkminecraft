@@ -10,7 +10,7 @@ var Express = require('express'),
     SECURITY_TOKEN = process.env.DO_TOKEN,
     ROOT_DIR = process.env.ROOT_DIR,
     SERVICE_BASE_URL = "https://api.digitalocean.com/v2",
-    SERVERS = ["techworld2", "crashlanding"];
+    SERVERS = ["techworld2", "crashlanding", "dw20"];
 
 /**
  *
