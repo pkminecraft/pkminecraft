@@ -257,7 +257,7 @@ function DropletFactory() {
 function ImageManager() {
     "use strict";
 
-    var url = SERVICE_BASE_URL + "/images",
+    var url = SERVICE_BASE_URL + "/images?private=true",
         request = {
             "Authorization": "Bearer " + SECURITY_TOKEN,
             "Content-Type": "application/json"
