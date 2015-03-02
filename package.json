@@ -5,14 +5,18 @@
   "dependencies": {
     "client-http": "0.0.7",
     "commonjs": "0.0.1",
+    "cors": "~2.4.1",
+    "digitalocean-api": "^0.1.1",
+    "do-wrapper": "^0.1.1",
     "express": "~4.0.0",
-	"cors":"~2.4.1",
     "mc-ping": "~0.0.2",
     "moment": "^2.8.3",
     "node-rest-client": "^1.0.0",
-    "q": "^1.0.1",
+    "q": "^1.2.0",
+    "request": "^2.53.0",
     "restler": "^3.2.2",
-    "underscore": "^1.7.0"
+    "underscore": "^1.7.0",
+    "xtend": "^4.0.0"
   },
   "devDependencies": {
     "grunt": "~0.4.4",
