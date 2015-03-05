@@ -3,7 +3,7 @@
 
 "use strict";
 
-var DigitalOcean = require('do-wrapper');
+var DigitalOcean = require('../../lib/do-wrapper');
 var Q = require('q');
 var mapper = require("./mapper");
 
@@ -31,6 +31,7 @@ exports.listServers = function () {
         if (!error) {
             api.dropletsGetAll(function (error, droplets) {
                 if (!error) {
+                    console.log(droplets.droplets[0].region);
                     deferred.resolve(buildServerList(images.images, droplets));
                 }
             });

@@ -40,8 +40,8 @@ exports.map = function (server, images, droplets) {
         };
 
     if (image !== undefined) {
-        retVal.image["image-id"] = image.id;
-        retVal.image["image-date"] = image.created_at;
+        retVal.image.id = image.id;
+        retVal.image.date = image.created_at;
     }
     
     return retVal;
