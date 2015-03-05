@@ -31,7 +31,7 @@ exports.listServers = function () {
         if (!error) {
             api.dropletsGetAll(function (error, droplets) {
                 if (!error) {
-                    deferred.resolve(buildServerList(images.images, droplets));
+                    deferred.resolve(buildServerList(images.images, droplets.droplets));
                 }
             });
         }

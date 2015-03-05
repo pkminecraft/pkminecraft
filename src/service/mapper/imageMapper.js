@@ -15,7 +15,7 @@ function isImageNewer(currentImage, possibleImage) {
 }
 
 exports.findImage = function (images, server) {
-    var image, possibleImage, index;
+    var image, index;
     for (index in images) {
         if (images.hasOwnProperty(index) &&
                 isServerImage(server, images[index]) &&

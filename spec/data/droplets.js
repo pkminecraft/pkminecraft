@@ -4,7 +4,7 @@
 "use strict";
 
 exports.core_active_droplets = [ {
-    "id": 1,
+    "id": 1001,
     "name": 'test1.paulkimbrel.com',
     "memory": 512,
     "vcpus": 1,
@@ -55,10 +55,10 @@ exports.core_active_droplets = [ {
     "size_slug": '512mb',
     "networks": {
         "v4": [ {
-            ip_address: '107.170.113.76',
-            netmask: '255.255.240.0',
-            gateway: '107.170.112.1',
-            type: 'public'
+            ip_address: '192.168.1.101',
+            netmask: '255.255.255.0',
+            gateway: '192.168.1.1',
+            type: 'private'
         } ],
         "v6": []
     },
