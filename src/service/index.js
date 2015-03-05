@@ -3,7 +3,7 @@
 
 var Express = require('express');
 var cors = require('cors');
-var servers = require('./servers');
+var serverManager = require('./serverManager');
 
 //Constants
 var CONTEXT_ROOT = process.env.CONTEXT_ROOT || "/pkminecraft";
@@ -42,7 +42,7 @@ function main() {
     }
     
     app.get(CONTEXT_ROOT, function (request, response) {
-        servers.listServers().then(function (servers) {
+        serverManager.listServers().then(function (servers) {
             sendResponse(response, "servers", "success", servers);
         }, function (error) {
             sendError(response, error);

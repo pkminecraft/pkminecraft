@@ -14,7 +14,7 @@ function isImageNewer(currentImage, possibleImage) {
             (moment(currentImage.created_at) < moment(possibleImage.created_at));
 }
 
-function findImage(images, server) {
+exports.findImage = function (images, server) {
     var image, possibleImage, index;
     for (index in images) {
         if (images.hasOwnProperty(index) &&
@@ -23,27 +23,7 @@ function findImage(images, server) {
             image = images[index];
         }
     }
-    
+
     return image;
-}
-
-exports.map = function (server, images, droplets) {
-    var image = findImage(images, server),
-        retVal = {
-            "slug": server,
-            "image": {
-                "name": server + "-save"
-            },
-            "droplet": {
-            },
-            "dns": server + ".paulkimbrel.com"
-        };
-
-    if (image !== undefined) {
-        retVal.image.id = image.id;
-        retVal.image.date = image.created_at;
-    }
-    
-    return retVal;
 };
 

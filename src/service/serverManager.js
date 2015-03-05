@@ -5,7 +5,7 @@
 
 var DigitalOcean = require('../../lib/do-wrapper');
 var Q = require('q');
-var mapper = require("./mapper");
+var mapper = require("./mapper/mapper");
 
 var TOKEN = process.env.TOKEN;
 var SERVERS = process.env.SERVERS || ["techworld2", "crashlanding", "dw20", "skyfactory2"];
@@ -15,13 +15,13 @@ var api = new DigitalOcean(TOKEN, 50);
 function buildServerList(images, droplets) {
     var serverIndex,
         servers = [];
-    
+
     for (serverIndex in SERVERS) {
         if (SERVERS.hasOwnProperty(serverIndex)) {
             servers.push(mapper.map(SERVERS[serverIndex], images, droplets));
         }
     }
-    
+
     return servers;
 }
 
@@ -31,16 +31,15 @@ exports.listServers = function () {
         if (!error) {
             api.dropletsGetAll(function (error, droplets) {
                 if (!error) {
-                    console.log(droplets.droplets[0].region);
                     deferred.resolve(buildServerList(images.images, droplets));
                 }
             });
         }
-                             
+
         if (error) {
             deferred.reject(error);
         }
     });
-    
+
     return deferred.promise;
 };

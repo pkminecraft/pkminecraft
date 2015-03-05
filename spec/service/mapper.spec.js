@@ -4,7 +4,7 @@
 "use strict";
 
 var assert = require("assert");
-var mapper = require("../../src/service/mapper");
+var mapper = require("../../src/service/mapper/mapper");
 var images = require("../data/images");
 
 describe('Server Mapper', function () {
