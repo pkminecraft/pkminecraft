@@ -13,7 +13,7 @@
     <link href="css/application.css" rel="stylesheet">
 
     <script src="../../bower_components/angular/angular.js"></script>
-    <script src="js/application.js"></script>
+    <script src="js/application-old.js"></script>
 
 </head>
 
@@ -47,12 +47,12 @@
                 <th>Discrete Actions</th>
             </tr>
             <tr ng-repeat="server in servers">
-                <td>{{server.dns}}</td>
+                <td>{{server.name}}.paulkimbrel.com</td>
                 <td>
-                    <span class="wait" ng-show="message"> </span>{{server.droplet.status}}
+                    <span class="wait" ng-show="message"> </span>{{server.status.status}}
                 </td>
                 <td>
-                    {{server.droplet.ip_address}}
+                    {{server.status.ipaddress}}
                 </td>
                 <td>
                     <div class="btn-group compound">

@@ -12,7 +12,9 @@ describe('Server Mapper', function () {
 	describe('Before creating anything', function () {
 		var result = mapper.map("test1", [], []);
 		it('should find NO image or droplet', function () {
-            assert.equal(undefined, result.droplet);
+            assert.equal(undefined, result.droplet.id);
+            assert.equal(undefined, result.droplet.ip_address);
+            assert.equal("inactive", result.droplet.status);
             assert.equal(undefined, result.image.date);
             assert.equal(undefined, result.image.id);
         });
@@ -27,7 +29,9 @@ describe('Server Mapper', function () {
 	describe('Server stopped, image sitting in waiting', function () {
 		var result = mapper.map("test1", images.core_images, []);
 		it('should have no droplet', function () {
-            assert.equal(undefined, result.droplet);
+            assert.equal(undefined, result.droplet.id);
+            assert.equal(undefined, result.droplet.ip_address);
+            assert.equal("inactive", result.droplet.status);
         });
         
 		it('should have an image', function () {
@@ -45,7 +49,9 @@ describe('Server Mapper', function () {
 	describe('Server stopped, duplicate images', function () {
 		var result = mapper.map("test2", images.duplicate_images, []);
 		it('should have no droplet', function () {
-            assert.equal(undefined, result.droplet);
+            assert.equal(undefined, result.droplet.id);
+            assert.equal(undefined, result.droplet.ip_address);
+            assert.equal("inactive", result.droplet.status);
         });
         
 		it('should have the newest image', function () {

@@ -6,8 +6,6 @@
 var moment = require("moment");
 
 function isDroplet(server, possibleDroplet) {
-    console.log("---------------");
-    console.log(possibleDroplet);
     return (possibleDroplet.name.indexOf(server) === 0);
 }
 

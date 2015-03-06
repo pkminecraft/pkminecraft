@@ -1,7 +1,7 @@
 /*globals console, angular, setInterval, clearInterval */
 /*jslint white: true */
 var pkminecraft = angular.module("pkminecraft", [])
-    .constant("DATA_ROOT", "http://localhost:8080/pkminecraft")
+    .constant("DATA_ROOT", "http://localhost:8080")
     .value("debug", true);
 
 pkminecraft.run(['$http', '$rootScope', '$q', 'DATA_ROOT',
@@ -29,19 +29,6 @@ pkminecraft.controller("servers", ['$http', '$rootScope', '$scope', '$q', 'DATA_
                 }
                 console.log(ex);
             });
-        }
-        
-        function listServers() {
-            var deferred = $q.defer();
-            $http.get(DATA_ROOT).success(function (servers) {
-                deferred.resolve(servers);
-            }).error(function (ex) {
-                deferred.reject({
-                    status: "No Servers"
-                });
-            });
-            
-            return deferred.promise;
         }
 
         function startTimer(stopStatus) {
@@ -75,13 +62,36 @@ pkminecraft.controller("servers", ['$http', '$rootScope', '$scope', '$q', 'DATA_
 
         $scope.refreshStatus = function (serverName) {
             console.log("Refreshing...");
-            
-            listServers().then(function (serverList) {
-                $scope.servers = serverList.servers;
+            var promise, deferred = $q.defer();
+            $http.get(DATA_ROOT + "/" + serverName + "/status").success(function (data) {
+                deferred.resolve(data);
+                if (data.status === clearStatus) {
+                    clearInterval(timer);
+                    $rootScope.message = "";
+                }
+            }).error(function (ex) {
+                deferred.resolve({
+                    status: "No Server"
+                });
+                clearInterval(timer);
+                $rootScope.message = "";
+                console.log("Unable to get status");
+            });
+            promise = deferred.promise;
+            promise.then(function (finalStatus) {
+                var index, serverDetails;
+                for (index in $scope.servers) {
+                    if ($scope.servers.hasOwnProperty(index)) {
+                        serverDetails = $scope.servers[index];
+                        if (serverDetails.name === serverName) {
+                            serverDetails.status = finalStatus;
+                        }
+                    }
+                }
             });
         };
 
-        $http.get(DATA_ROOT).success(function (data) {
+        $http.get(DATA_ROOT + "/servers").success(function (data) {
             var index, server, serverDetails, serverList = data;
             $scope.servers = [];
             for (index in serverList) {

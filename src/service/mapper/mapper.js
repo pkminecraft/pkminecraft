@@ -14,6 +14,9 @@ exports.map = function (server, images, droplets) {
             "image": {
                 "name": server + "-save"
             },
+            "droplet": {
+                "status": "inactive"
+            },
             "dns": server + ".paulkimbrel.com"
         };
 
@@ -23,7 +26,6 @@ exports.map = function (server, images, droplets) {
     }
     
     if (droplet !== undefined) {
-        retVal.droplet = {};
         retVal.droplet.id = droplet.id;
         retVal.droplet.ip_address = droplet.networks.v4[0].ip_address;
         retVal.droplet.status = droplet.status;
